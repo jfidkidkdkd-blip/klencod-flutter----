@@ -1,0 +1,106 @@
+pubspec.yaml`:
+
+```yaml
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^0.13.3
+```
+
+### 2. نموذج بيانات `news.dart`:
+
+```dart
+class News {
+  final String title;
+  final String description;
+  final String urlToImage;
+
+  News({required this.title, required this.description, required this.urlToImage});
+
+  factory News.fromJson(Map<String, dynamic> json) {
+    return News(
+      title: json['title'],
+      description: json['description'],
+      urlToImage: json['urlToImage'],
+    );
+  }
+}
+```
+
+### 3. الكود الرئيسي في `main.dart`:
+
+```dart
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'news.dart';
+
+void main() {
+  runApp(const NewsApp());
+}
+
+class NewsApp extends StatelessWidget {
+  const NewsApp({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'أخبار العالم',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: const NewsHomePage(),
+    );
+  }
+}
+
+class NewsHomePage extends StatefulWidget {
+  const NewsHomePage({Key? key}) : super(key: key);
+
+  @override
+  _NewsHomePageState createState() => _NewsHomePageState();
+}
+
+class _NewsHomePageState extends State<NewsHomePage> {
+  List<News> _newsList = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchNews();
+  }
+
+  Future<void> _fetchNews() async {
+    final response = await http.get(Uri.parse('https://newsapi.org/v2/top-headlines?country=us&apiKey=YOUR_API_KEY'));
+
+    if (response.statusCode == 200) {
+      final List<dynamic> newsJson = json.decode(response.body)['articles'];
+      setState(() {
+        _newsList = newsJson.map((json) => News.fromJson(json)).toList();
+      });
+    } else {
+      throw Exception('فشل في تحميل الأخبار');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('أخبار العالم')),
+      body: _newsList.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : ListView.builder(
+              itemCount: _newsList.length,
+              itemBuilder: (context, index) {
+                final news = _newsList[index];
+                return ListTile(
+                  title: Text(news.title),
+                  subtitle: Text(news.description),
+                  leading: news.urlToImage != null
+                      ? Image.network(news.urlToImage, width: 100, fit: BoxFit.cover)
+                      : null,
+                );
+              },
+            ),
+    );
+  }
+}
+```
